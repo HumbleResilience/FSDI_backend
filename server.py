@@ -6,6 +6,7 @@ import json
 import random
 from config import db
 from flask_cors import CORS
+from bson import ObjectId
 
 
 # new instance of Flask class
@@ -47,9 +48,13 @@ def my_name():
 
 @app.route("/api/catalog")
 def get_catalog():
-    test = db.products.find({})
-    print(test)
-    return json.dumps(catalog)
+    cursor = db.products.find({})
+    results = []
+    for product in cursor:
+        product["_id"]= str(product["_id"])
+        results.append(product)
+
+    return json.dumps(results)
 
 @app.route("/api/catalog", methods=["post"])
 def save_product():
@@ -84,8 +89,11 @@ def save_product():
     print("----saved----")
     print(product)
 
-    return json.dumps(product)
+    #get string of object id
+    product["_id"] = str(product["_id"])
 
+    return json.dumps(product)
+ 
 
 
 @app.route("/api/cheapest")
@@ -93,12 +101,13 @@ def get_cheapest():
     # find the chepest product on the catalog list
     # 1 - travel the list (catalog) for loop
     # 2 - print the price on the consol
-
-    cheap = catalog[0]
-    for product in catalog:
+    cursor = db.products.find({})
+    cheap = cursor[0]
+    for product in cursor:
         if product["price"] < cheap["price"]:
             cheap = product
 
+    cheap["_id"] = str(cheap["_id"])
     #return it as json
     return json.dumps(cheap)
 
@@ -106,13 +115,19 @@ def get_cheapest():
 
 @app.route("/api/product/<id>")
 def get_product(id):
+    #vaidate id is valid ObjectId
+    if(not ObjectId.is_valid(id)):
+        return abort(400, "id is not a valid ObjectId")
+
     # find the product whos _id is equal to id
-    for product in catalog:
-        if product["_id"] == id:
-            return json.dumps(product)
-            
-    #return it as json
-    return "NOT FOUND"
+    result = db.products.find_one({"_id":ObjectId(id)})
+    if not result:
+        return abort(404) #404 - not Found
+
+
+    result["_id"] = str(result["_id"])
+    
+    return json.dumps(result)
 
 
 
