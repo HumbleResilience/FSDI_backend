@@ -56,6 +56,9 @@ def get_catalog():
 
     return json.dumps(results)
 
+
+
+
 @app.route("/api/catalog", methods=["post"])
 def save_product():
     product = request.get_json()
@@ -135,11 +138,10 @@ def get_product(id):
 @app.route("/api/catalog/<category>")
 def get_by_category(category):
     result=[]
-    category = category.lower()
-    for product in catalog:
-        if product["category"].lower() == category:
-            result.append(product)
-        
+    cursor = db.products.find({"category": category})
+    for prod in cursor:
+        prod["_id"] = str(prod["_id"])
+        result.append(prod)
     return json.dumps(result)
 
 
@@ -191,6 +193,67 @@ def get_highest_investment():
     return json.dumps(highest)
 
 
+    ####################################################################################################
+    #####################################Coupon codes enpoints##########################################
+    ####################################################################################################
+
+    #GET
+@app.route("/api/couponCodes")
+def get_coupon_codes():
+    cursor = db.couponCode.find({})                    
+    result = []
+    for coupon in cursor:
+        coupon["_id"]= str(coupon["_id"])
+        result.append(coupon)
+
+    return json.dumps(result)
+
+
+
+    #POST /api/coupponCodes
+    
+@app.route("/api/couponCodes", methods=["POST"])
+def save_coupon():
+    couponCode = request.get_json()
+    print (couponCode)
+
+    if not "code" in couponCode:
+        return abort(400, "code is required")
+
+    if not "discount" in couponCode:
+        return abort(400, "discount is required")
+
+
+    db.couponCode.insert_one(couponCode)
+
+    #get string of object id
+    couponCode["_id"] = str(couponCode["_id"])
+
+    return json.dumps(couponCode)
+
+
+    # POST /api/couponCodes  x
+# 1 - create the end point   x
+# 2 - get the json from the reqs  x
+#   - validate (code, discount)
+# 3 - save the couponCode to db.couponCodes
+# 4 - return the saved object as json
+# 5 - test it
+
+@app.route("/api/couponCodes/<code>")
+def valid_coupon(code):
+
+
+    # find the code 
+    result = db.couponCode.find_one({"code": code})
+    if not result:
+        return abort(404) #404 - not Found
+
+    #fix _id
+    result["_id"] = str(result["_id"])
+    
+    #return as json
+    return json.dumps(result)
 
 
 # start the server
